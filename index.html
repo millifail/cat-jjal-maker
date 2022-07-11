@@ -50,6 +50,13 @@
          },
       };
 
+      const fetchCat = async (text) => {
+        const OPEN_API_DOMAIN = "https://cataas.com";
+        const response = await fetch(`${OPEN_API_DOMAIN}/cat/says/${text}?json=true`);
+        const responseJson = await response.json();
+        return `${OPEN_API_DOMAIN}/${responseJson.url}`;
+      };
+
       
 
       const Title=(props)=>{
@@ -87,7 +94,7 @@
             setErrormessage('빈값은 입력할 수 없음');
             return;
           }
-          props.updateMainCat();
+          props.updateMainCat(value);
 
         }
 
@@ -117,6 +124,12 @@
       //mapping을 통해 배열의 개수만큼 태그를 추가해준다 ( 배열의 개수를 유동적으로 늘리면 태그가 유동적으로 늘어난다)
       //key값을 주어서 자식들간의 고유값을 할당한다 (여기서는 url을 키값으로 하였음)
       function Favorites(props){
+        if (props.favorites.length==0){
+          return(
+            <div>사진 위 하트를 눌러 사진을 저장해봐요!</div>
+          )
+        }
+
         return(
           <ul className="favorites">  
             {props.favorites.map(cat=><CatItem img={cat} key={cat}/>)}
@@ -127,6 +140,8 @@
 
       //class 는 className으로 쓴다
       const MainCard = (props) =>{
+        
+        const heartIcon = props.alreadyFavorite ?"💖" :"🤍";
 
         return(
           <div className="main-card">
@@ -138,7 +153,7 @@
             <button 
             onClick={props.onHeartClick}
             >
-            🤍
+            {heartIcon}
             </button>
           </div>
         )
@@ -162,12 +177,40 @@
           jsonLocalStorage.getItem('favorites')||[]
           );  //앞에 게 null이면 뒤에거를 사용
 
-        const updateMainCat=(e)=>{
-          setMainCat(CAT2);
-          const nextCounter = counter+1
-          setCounter(nextCounter);
-          
-          jsonLocalStorage.setItem('counter',nextCounter);
+
+        const 하트이미누름 = favorites.includes(mainCat);
+
+        async function setIntialCat(){
+          const newCat = await fetchCat('first cat');
+          setMainCat(newCat);
+        }
+
+        //react component안의 코드는 기본적으로 ui가 새로 업데이트될 때마다 계속 불린다
+        //다만 여기서 어떤상태가 업데이트 될때만 불려라 하고 싶을 때 useEffect의 두번째 인자로 
+        //배열을 넘기고,  거기에 원하는 상태를 넘겨주면 된다
+        //근데 상태는 상관없고, 앱이 맨 처음에 생성되었을 때만 호출하고 싶다면 빈배열을 넘긴다.
+        React.useEffect(()=>{  
+          setIntialCat();
+        },[])
+        
+        
+
+        async function updateMainCat(value){
+          const newCat = await fetchCat(value);
+
+          setMainCat(newCat);
+
+
+          //const nextCounter = counter+1
+          //setCounter(nextCounter);
+          //jsonLocalStorage.setItem('counter',nextCounter);
+
+          setCounter((prev)=>{
+            const nextCounter = prev+1;
+            jsonLocalStorage.setItem('counter',nextCounter);
+            return nextCounter
+
+          })
         }
 
         const HandleHeartClick=()=>{
@@ -176,11 +219,13 @@
           jsonLocalStorage.setItem('favorites',nextFavorites);
         }
 
+        const initalCounter = counter===null ? "":counter+ "번째 ";
+
         return(
           <div>
-            <Title>{counter}번째 고양이 가라사대</Title>
+            <Title>{initalCounter}고양이 가라사대</Title>
             <Form updateMainCat={updateMainCat}/>
-            <MainCard img={mainCat} onHeartClick={HandleHeartClick}/>
+            <MainCard img={mainCat} onHeartClick={HandleHeartClick} alreadyFavorite = {하트이미누름}/>
             <Favorites favorites = {favorites}/>
           </div>
         )
